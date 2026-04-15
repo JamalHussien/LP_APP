@@ -1,13 +1,26 @@
+"""Deprecated compatibility shims for legacy top-level imports.
+
+The canonical backend interfaces now live under ``optimization.core``.
+"""
+
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Any
-from models import LPRequest, LPSolution
+
+from models import LPSolution, LPRequest
+
 
 class ISolver(ABC):
+    """Legacy adapter contract kept for compatibility."""
+
     @abstractmethod
     def solve(self, req: LPRequest) -> LPSolution:
-        """Solve an LP request and return solution DTO"""
+        """Solve a legacy LP request and return a legacy solution DTO."""
+
 
 class IRenderer(ABC):
+    """Legacy adapter contract kept for compatibility."""
+
     @abstractmethod
-    def render_graph(self, req: LPRequest, solution: LPSolution) -> bytes:
-        """Return image bytes (PNG) for graphical mode"""
+    def render_graph(self, req: LPRequest, solution: LPSolution):
+        """Render a graphical artifact for a legacy LP request."""

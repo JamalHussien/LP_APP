@@ -1,0 +1,17 @@
+[project]
+name = "optimization-techniques"
+version = "0.1.0"
+description = "Modular optimization algorithms (LP/IP/Flow) with FastAPI adapter"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "numpy",
+    "scipy",
+    "matplotlib",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

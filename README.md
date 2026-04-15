@@ -1,118 +1,103 @@
-# Linear Programming Solver
+# Optimization Toolkit
 
-A full-stack application for solving linear programming (LP) problems using numerical and graphical methods. Built with FastAPI backend and React/Vite frontend.
+A full-stack optimization app built with FastAPI and React/Vite. It began as a Linear Programming solver and now supports three workflows from a single service-selection screen:
 
-## 🎯 Features
+1. Linear Programming (LP)
+2. Steepest Descent / Steepest Ascent
+3. Golden Section Search
 
-- **Numerical Solving**: Optimized solutions using SciPy's `linprog`
-- **Graphical Visualization**: 
-  - 2D constraint plots with feasible region shading
-  - Interactive 3D plots for 3-variable problems
-- **Flexible Problem Definition**:
-  - Support for maximize/minimize objectives
-  - Multiple constraint types (≤, ≥, =)
-  - Optional non-negativity constraints
-- **REST API**: CORS-enabled endpoints for easy integration
-- **Responsive UI**: Modern React interface with real-time form updates
+All workspaces share the same UI shell, API client, validation style, and result presentation patterns.
 
-## 🏗️ Architecture
+## Contents
 
-### Technology Stack
+- `optimization/` - canonical backend package for domain models, algorithms, parsers, plotting utilities, application services, and API wiring.
+- `optimization/app/api.py` - thin FastAPI endpoints for LP, steepest descent/ascent, and golden section search.
+- `lp-gui/` - React UI with one workspace per optimization method.
+- `tests/` - pytest coverage for algorithm cores, application services, and API behavior.
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend API** | FastAPI + Uvicorn |
-| **Optimization Engine** | SciPy (linprog with HiGHS solver) |
-| **Visualization** | Matplotlib, Plotly |
-| **Frontend Framework** | React 19 |
-| **Build Tool** | Vite |
-| **HTTP Client** | Axios |
+## Architecture Map
 
-### Project Structure
+- `optimization/` is the backend source of truth. New backend code should live here, not in legacy top-level modules.
+- `optimization/algorithms/` contains pure solver logic and result dataclasses. These modules do not depend on FastAPI, React, DTOs, or plotting payloads.
+- `optimization/app/` contains application services, DTOs, dependency wiring, and the thin HTTP adapter in `api.py`.
+- `optimization/infrastructure/` contains parsing, plotting, and logging helpers used by the application layer.
+- `main.py` and the other top-level Python modules are compatibility shims only. Internal imports should target `optimization.*`.
+- `lp-gui/src/app/` contains the app shell, service registry, selection screen, and workspace loading.
+- `lp-gui/src/workspaces/` contains one workspace per optimization method.
+- `lp-gui/src/services/` contains feature-local hooks, forms, and results components.
+- `lp-gui/src/api/client.js` is the shared browser-to-backend HTTP client.
 
-```
-LP_APP/
-├── Backend (Python)
-│   ├── main.py              # FastAPI application & /solve endpoint
-│   ├── models.py            # Pydantic data models (LPRequest, LPSolution)
-│   ├── interfaces.py        # Abstract base classes (ISolver, IRenderer)
-│   ├── solvers.py           # SciPySolver implementation
-│   ├── renderers.py         # MatplotlibRenderer for graphical output
-│   ├── requirements.txt     # Python dependencies
-│   └── venv/                # Virtual environment
-│
-├── lp-gui/                  # React Frontend
-│   ├── src/
-│   │   ├── main.jsx         # Monolithic App component
-│   │   ├── App.jsx          # Modular App (component-based)
-│   │   ├── index.css        # Global styles
-│   │   ├── App.css          # App-specific styles
-│   │   └── components/
-│   │       ├── ObjectiveForm.jsx
-│   │       ├── ConstraintsForm.jsx
-│   │       └── ResultPanel.jsx
-│   ├── package.json         # Node dependencies & scripts
-│   ├── vite.config.js       # Vite configuration
-│   └── index.html           # HTML entry point
-│
-├── .gitignore
-└── README.md
-```
+## Prerequisites
 
-## 🚀 Quick Start
+- Python 3.10+
+- Node.js 18+
+- Recommended: a virtual environment
 
-### Prerequisites
-
-- Python 3.8+
-- Node.js 16+
-- pip & npm
-
-### Backend Setup
+## Backend Setup
 
 ```bash
-# Navigate to project root
-cd c:\Users\HP\projects\LP_APP
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-# Create virtual environment
-python -m venv venv
+On macOS/Linux, activate with:
 
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
+```bash
+source .venv/bin/activate
+```
 
-# Install dependencies
-pip install fastapi uvicorn scipy numpy matplotlib plotly pydantic
+### Run API
 
-# Run server
+```bash
 uvicorn main:app --reload
 ```
 
-Backend runs at: **http://127.0.0.1:8000**
+The API runs at `http://127.0.0.1:8000`, with docs at `http://127.0.0.1:8000/docs`.
 
-API docs: **http://127.0.0.1:8000/docs**
-
-### Frontend Setup
+### Backend Tests
 
 ```bash
-# Navigate to frontend directory
+python -m pytest -q
+```
+
+## Frontend Setup
+
+```bash
 cd lp-gui
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-Frontend runs at: **http://localhost:5173**
+The frontend dev server runs at `http://localhost:5173`.
 
-## 📖 API Documentation
+### Frontend Validation
 
-### Endpoint: `POST /solve`
+```bash
+cd lp-gui
+npm run lint
+npm run test
+npm run build
+```
 
-**Request Body** (`LPRequest`):
+## UI Flow
+
+1. Service selection: choose LP, Steepest Descent, or Golden Section Search.
+2. Workspace:
+   - LP: configure objective coefficients, constraints, solve mode, and non-negativity.
+   - Steepest Descent: choose minimize or maximize, enter a differentiable objective or quadratic data, start point, step mode, and stopping criteria.
+   - Golden Section Search: enter a one-variable objective, choose minimize or maximize, set `[a, b]`, tolerance, and max iterations.
+3. Results:
+   - LP shows the numerical solution or graphical output.
+   - Steepest Descent shows the optimization path, objective history, step sizes, and diagnostics.
+   - Golden Section Search shows the estimated optimum, interval history, and convergence chart.
+
+## API Endpoints
+
+### `POST /solve`
+
+Solves LP problems numerically or graphically.
+
 ```json
 {
   "mode": "numerical",
@@ -120,325 +105,122 @@ Frontend runs at: **http://localhost:5173**
   "c": [2, 3],
   "sense": "maximize",
   "constraints": [
-    {
-      "a": [1, 1],
-      "sense": "<=",
-      "b": 4
-    }
+    {"a": [1, 1], "sense": "<=", "b": 4}
   ],
   "nonneg": true
 }
 ```
 
-**Response** (`LPSolution` - Numerical Mode):
+### `POST /optimize/steepest-descent`
+
+Runs the generalized gradient search. `sense` defaults to `"minimize"` for backward compatibility and can also be `"maximize"` for steepest ascent.
+
+### `POST /optimize/golden-section`
+
+Runs one-dimensional Golden Section Search on a closed interval.
+
 ```json
 {
-  "x": [0.0, 4.0],
-  "objective": 12.0,
-  "success": true,
-  "message": null
+  "expression": "(x - 2)^2",
+  "a": 0,
+  "b": 5,
+  "sense": "minimize",
+  "epsilon": 1e-5,
+  "max_iters": 100
 }
 ```
 
-**Response** (Graphical Mode):
-- 2D: PNG image bytes
-- 3D: HTML with interactive Plotly visualization
+## Golden Section Search
 
-### Request Fields
+Golden Section Search is a derivative-free method for unimodal one-dimensional optimization on a closed interval `[a, b]`. It is useful when:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `mode` | `"numerical"` \| `"graphical"` | Solving method |
-| `n` | `integer` | Number of decision variables |
-| `c` | `array[float]` | Objective function coefficients |
-| `sense` | `"maximize"` \| `"minimize"` | Optimization direction |
-| `constraints` | `array[Constraint]` | List of constraints |
-| `nonneg` | `boolean` | Apply non-negativity constraints (x ≥ 0) |
+- the objective depends on exactly one variable
+- the optimum is bracketed by a reliable interval
+- the function is unimodal on that interval
 
-### Constraint Object
+### Assumptions and Limitations
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `a` | `array[float]` | Constraint coefficients |
-| `sense` | `"<="` \| `">="` \| `"="` | Constraint type |
-| `b` | `float` | Right-hand side value |
+- The objective should be unimodal on `[a, b]`.
+- If the interval contains multiple local optima, the reported result may be misleading.
+- The method only supports one-variable expressions in this app.
+- Objective evaluations must remain finite inside the interval.
 
-### Example: Solve a 2D LP Problem
+### Inputs
 
-**Problem**: Maximize $2x_1 + 3x_2$ subject to:
-- $x_1 + x_2 \leq 4$
-- $x_1 \geq 0, x_2 \geq 0$
+- `expression`: one-variable objective such as `(x - 2)^2`
+- `a`: lower bound
+- `b`: upper bound with `a < b`
+- `sense`: `"minimize"` or `"maximize"`
+- `epsilon`: stop when interval width is below this tolerance
+- `max_iters`: maximum number of interval-reduction steps
 
-**Request**:
-```bash
-curl -X POST "http://127.0.0.1:8000/solve" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "mode": "numerical",
-    "n": 2,
-    "c": [2, 3],
-    "sense": "maximize",
-    "constraints": [
-      {"a": [1, 1], "sense": "<=", "b": 4}
-    ],
-    "nonneg": true
-  }'
-```
+### Outputs
 
-**Response**:
-```json
-{
-  "x": [0.0, 4.0],
-  "objective": 12.0,
-  "success": true,
-  "message": null
-}
-```
+- `x_star`: estimated optimum
+- `fx_star`: objective value at the estimated optimum
+- `iterations`: number of interval-reduction steps performed
+- `termination_reason`: why the algorithm stopped
+- `history`: full iteration history with interval bounds, interior points, objective values, width, and current best estimate
 
-## 🎨 Frontend Usage
+### Interior-Point Convention
 
-### Running the App
+This app uses:
 
-1. **Select Mode**: Choose between "Numerical" (for exact solution) or "Graphical" (for visualization)
+- `d = phi * (xu - xl)`
+- `x1 = xl + d`
+- `x2 = xu - d`
 
-2. **Specify Variables**: Enter the number of decision variables (2 or 3)
+Because `phi ~= 0.618`, `x1` is usually to the right of `x2`.
 
-3. **Define Objective**:
-   - Toggle between "Maximize" and "Minimize"
-   - Enter coefficient for each variable
+Example on `[0, 2]`:
 
-4. **Add Constraints**:
-   - Click "Add Constraint" button
-   - Enter coefficients, select constraint type (≤, ≥, =), enter RHS value
-   - Repeat for additional constraints
+- width = `2`
+- `d0 = phi * 2 = 1.236067...`
+- `x1 = 1.236067...`
+- `x2 = 0.763932...`
 
-5. **Optional Settings**:
-   - Check/uncheck "Non-negativity constraints" for $x \geq 0$
+## Steepest Descent / Ascent
 
-6. **Solve**:
-   - Click "Solve" button
-   - View results below
+The steepest-descent endpoint is now a generalized gradient-search flow:
 
-### Component Architecture (App.jsx)
+- `sense = "minimize"` uses the steepest descent direction.
+- `sense = "maximize"` uses the steepest ascent direction.
+- `mode = "constant"` uses a fixed step size.
+- `mode = "optimal"` uses the exact quadratic step when curvature supports the chosen sense, otherwise an adaptive one-dimensional line search with backtracking fallback.
 
-The modular version uses reusable components:
+The endpoint name remains `/optimize/steepest-descent` for compatibility.
 
-- **ObjectiveForm**: Handles objective function input
-- **ConstraintsForm**: Manages constraints and non-negativity toggle
-- **ResultPanel**: Displays numerical results or images
+## Linear Programming
 
-## 🔧 Development Guide
+LP supports:
 
-### Backend Structure
+- numerical solving through SciPy HiGHS
+- maximize and minimize objectives
+- `<=`, `>=`, and `=` constraints
+- optional non-negativity constraints
+- graphical solving for supported 2D/3D cases
 
-**[models.py](models.py)** - Data Models
-- `Constraint`: Single linear constraint
-- `LPRequest`: HTTP request payload
-- `LPSolution`: Solver output DTO
+## Adding A New Algorithm
 
-**[interfaces.py](interfaces.py)** - Abstractions
-- `ISolver`: Solver interface for extensibility
-- `IRenderer`: Renderer interface for visualization
+1. Add the pure algorithm and result types under `optimization/algorithms/`.
+2. Add parser or plotting helpers under `optimization/infrastructure/` only if the algorithm needs them.
+3. Add an application service under `optimization/app/` that parses inputs, runs the algorithm, and prepares presentation data without doing HTTP work.
+4. Add DTO mapping in `optimization/app/mappers.py` and keep the endpoint in `optimization/app/api.py` thin.
+5. Add a workspace under `lp-gui/src/workspaces/`, feature-local form/results under `lp-gui/src/services/`, and register it in `lp-gui/src/app/serviceRegistry.js`.
+6. Add backend tests in `tests/` and frontend tests in `lp-gui/src/` so the feature is covered at service, API, and UI boundaries.
 
-**[solvers.py](solvers.py)** - Solver Implementation
-- `SciPySolver`: Uses `scipy.optimize.linprog` with HiGHS algorithm
-- Handles constraint conversion to standard form
-- Adjusts for maximization vs. minimization
-
-**[renderers.py](renderers.py)** - Visualization
-- `MatplotlibRenderer`: 2D/3D graphical rendering
-- 2D: Computes feasible region vertices, plots constraint lines and shading
-- 3D: Uses Plotly for interactive visualization
-- Returns PNG (2D) or HTML (3D)
-
-**[main.py](main.py)** - FastAPI Application
-- Configures CORS for React dev server
-- Dependency injection for solvers/renderers
-- Single endpoint: `POST /solve`
-
-### Frontend Structure
-
-**[main.jsx](lp-gui/src/main.jsx)** - Monolithic App
-- Single component with all state management
-- Direct HTTP calls with `fetch`
-- Suitable for simple use cases
-
-**[App.jsx](lp-gui/src/App.jsx)** - Component-Based App
-- Modular architecture with child components
-- Uses `axios` for HTTP requests
-- Supports HTML (Plotly) response handling
-
-**[components/](lp-gui/src/components/)** - Reusable UI Components
-- `ObjectiveForm.jsx`: Objective input
-- `ConstraintsForm.jsx`: Constraint management
-- `ResultPanel.jsx`: Results display
-
-### Running Tests
+## Validation Commands
 
 ```bash
-# Frontend linting
+python -m pytest -q
 cd lp-gui
 npm run lint
-
-# Backend (manual testing with API docs)
-# Visit: http://127.0.0.1:8000/docs
-```
-
-## 📊 Data Flow
-
-```
-User Input (React UI)
-    ↓
-Form State Management
-    ↓
-POST /solve → JSON Payload
-    ↓
-FastAPI Endpoint
-    ↓
-Choose Solver Path
-    ├─ Numerical: SciPySolver.solve()
-    │   ↓
-    │   scipy.optimize.linprog
-    │   ↓
-    │   LPSolution (JSON)
-    │
-    └─ Graphical: MatplotlibRenderer.render_graph()
-        ↓
-        Compute feasible vertices (2D) / planes (3D)
-        ↓
-        [2D: PNG] or [3D: HTML with Plotly]
-    ↓
-HTTP Response (JSON/Binary/HTML)
-    ↓
-React Component Displays Results
-```
-
-## 🧮 Mathematical Details
-
-### Standard Form Conversion
-
-The solver converts LP problems to SciPy's standard form:
-
-$$\min c^T x$$
-$$\text{subject to:}$$
-$$A_{ub} x \leq b_{ub}$$
-$$A_{eq} x = b_{eq}$$
-$$x_{\text{bounds}}$$
-
-**Constraint Handling**:
-- $a·x \leq b$ → `A_ub, b_ub`
-- $a·x \geq b$ → Transform to $-a·x \leq -b$
-- $a·x = b$ → `A_eq, b_eq`
-
-**Objective**:
-- Maximize: Negate coefficients, solve, negate result
-- Minimize: Solve directly
-
-**Bounds**:
-- With non-negativity: $x \in [0, \infty)$
-- Without: $x \in (-\infty, \infty)$
-
-### 2D Graphical Solution
-
-1. Extract constraint lines: $a_1 x_1 + a_2 x_2 = b$
-2. Find intersections (solve 2×2 linear systems)
-3. Include axis intersections if applicable
-4. Filter feasible points (satisfy all constraints)
-5. Order vertices by angle around centroid
-6. Shade feasible region (polygon)
-7. Mark optimal vertex
-
-## 🐛 Error Handling
-
-| Scenario | Status | Message |
-|----------|--------|---------|
-| Invalid constraints | 400 | Validation error detail |
-| Graphical mode with n ≠ 2,3 | 400 | "Graphical mode only supports 2 or 3 variables" |
-| Solve failure | 400 | SciPy error message |
-| Server error | 500 | Internal error detail |
-
-## 🔌 CORS Configuration
-
-The backend allows requests from:
-- `http://localhost:5173`
-- `http://127.0.0.1:5173`
-
-For production, update CORS origins in `main.py`.
-
-## 📦 Dependencies
-
-### Backend
-```
-fastapi>=0.104.0
-uvicorn>=0.24.0
-scipy>=1.11.0
-numpy>=1.24.0
-matplotlib>=3.8.0
-plotly>=5.18.0
-pydantic>=2.5.0
-```
-
-### Frontend
-```
-react@19.2.0
-axios@1.13.5
-plotly.js-dist-min@3.3.1
-react-plotly.js@2.6.0
-vite@5.0.0
-```
-
-## 🚢 Production Deployment
-
-### Backend
-
-```bash
-# Install production server
-pip install gunicorn
-
-# Run with Gunicorn
-gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
-```
-
-### Frontend
-
-```bash
-# Build production bundle
-cd lp-gui
+npm run test
 npm run build
-
-# Output in: lp-gui/dist/
-# Serve with any static server (nginx, Apache, etc.)
 ```
 
-## 🤝 Contributing
+## Notes
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-## 📝 License
-
-This project is open source and available under the MIT License.
-
-## 🎓 Future Enhancements
-
-- [ ] Parametric sensitivity analysis
-- [ ] Integer/binary programming support
-- [ ] Export results to CSV/PDF
-- [ ] Comprehensive unit test suite
-- [ ] Drag-and-drop constraint builder
-- [ ] Unbounded/infeasible problem detection
-- [ ] Problem history/save functionality
-- [ ] Dark mode UI theme
-
-## 📞 Support
-
-For issues, questions, or suggestions, please open an issue on GitHub.
-
----
-
-**Current Version**: 1.0  
-**Status**: Active Development
-**this doc was generated by github copilot in February 2026** 
+- Generated Python bytecode, pytest caches, frontend build output, and `node_modules` are ignored by Git.
+- Keep root-level Python modules as compatibility shims only.
+- Prefer small focused modules over large all-in-one files.
