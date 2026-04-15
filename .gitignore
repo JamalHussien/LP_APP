@@ -1,12 +1,25 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
 venv/
 .env
 
 # Node
 node_modules/
 dist/
+dist-ssr/
+lp-gui/node_modules/
+lp-gui/dist/
 
 # OS
 .DS_Store
+Thumbs.db
